@@ -8,12 +8,12 @@
 
   <script src="token.js"></script>
   <script>
-      var device_id = "";
+    var device_id = "";
     fetch(`https://api.spotify.com/v1/me/player/devices`, {
-      method: 'GET',
-      headers: {
+    method: 'GET',
+    headers: {
         'Authorization': `Bearer ${token}`
-      },
+    },
     }).then(response => {
         return response.json()
     }).then(data => {
