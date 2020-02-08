@@ -8,32 +8,85 @@
 
   <script src="token.js"></script>
   <script>
-    var device_id = "";
-    fetch(`https://api.spotify.com/v1/me/player/devices`, {
-    method: 'GET',
-    headers: {
-        'Authorization': `Bearer ${token}`
-    },
-    }).then(response => {
-        return response.json()
-    }).then(data => {
-        device_id = data.devices[0].id
-    });
+    function create_playlist() {
+        var playlist_id = document.getElementById("playlist_id").value 
+        var song_id = document.getElementById("song_uri").value 
 
-    function playSong() {
-        fetch(`https://api.spotify.com/v1/me/player/play?device_id=${device_id}`, {
-        method: 'PUT',
-        body: JSON.stringify({ uris: ['spotify:track:4SSnFejRGlZikf02HLewEF'] }),
+        fetch(`https://api.spotify.com/v1/playlists/${playlist_id}`, {
+        method: 'GET',
         headers: {
-            'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
         },
         }).then(response => {
-            console.log(response.status)
-        })
+            return response.json()
+        }).then(data => {
+            console.log(data.id)
+            return data
+        }).then(playlist => {
+            fetch(`https://api.spotify.com/v1/playlists/${playlist_id}/tracks`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            }).then(response => {
+                return response.json()
+            }).then(data => {
+                console.log(data)
+                return data.items
+            }).then(tracks => {
+                fetch(`https://api.spotify.com/v1/me`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                }).then(response => {
+                    return response.json()
+                }).then(data => {
+                    console.log(data.id)
+                    return data.id
+                }).then(user_id => {
+                    fetch(`https://api.spotify.com/v1/users/${user_id}/playlists`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            name: playlist.name + "--mix",
+                            public: false
+                        })
+                    }).then(response => {
+                        return response.json()
+                    }).then(data => {
+                        console.log(data)
+                        return data
+                    }).then(new_playlist => {
+                        fetch(`https://api.spotify.com/v1/playlists/${new_playlist.id}/tracks`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                uris: tracks.map(track => track.track.uri)
+                            })
+                        }).then(response => {
+                            return response.json()
+                        }).then(data => {
+                            console.log(data)
+                            return data
+                        })
+                    })
+                })
+            });
+        });
     }
   </script>
 
-  <form><input type="button" onclick="playSong()" value="Play song"/></form>
+<form id="form">
+        Song uri: <input type="text" id="song_uri"><br/>
+        Playlist uri: <input type="text" id="playlist_id"><br/>
+        <input type="button" onclick="create_playlist()" value="Create playlist">
+</form>
 </body>
 </html>
