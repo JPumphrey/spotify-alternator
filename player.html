@@ -8,93 +8,113 @@
 
   <script src="token.js"></script>
   <script>
-    function create_playlist() {
-        var playlist_uri = document.getElementById("playlist_uri").value
-        var song_uri = document.getElementById("song_uri").value 
 
-        var playlist_id = playlist_uri.replace("spotify:playlist:", "")
+    function add_tracks(new_playlist, new_tracks) {
+        return fetch(`https://api.spotify.com/v1/playlists/${new_playlist.id}/tracks`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                uris: new_tracks.slice(0, 100)
+            })
+        }).then(response => {
+            return response.json()
+        })
+    }
 
-        fetch(`https://api.spotify.com/v1/playlists/${playlist_id}`, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${token}`
+    function create_playlist_with_tracks(user_id, source_playlist, new_tracks) {
+        return fetch(`https://api.spotify.com/v1/users/${user_id}/playlists`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                name: source_playlist.name + "--mix",
+                public: false
+            })
+        }).then(response => {
+            return response.json()
+        }).then(new_playlist => {
+            add_tracks(new_playlist, new_tracks)
+        })
+    }
+
+    function get_current_user(source_playlist) {
+        return fetch(`https://api.spotify.com/v1/me`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
         },
         }).then(response => {
             return response.json()
         }).then(data => {
-            console.log(data.id)
-            return data
-        }).then(playlist => {
-            fetch(`https://api.spotify.com/v1/playlists/${playlist_id}/tracks`, {
+            return data.id
+        })
+    }
+
+    function get_tracks(source_playlist) {
+        return fetch(`https://api.spotify.com/v1/playlists/${source_playlist.id}/tracks`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+        }).then(response => {
+            return response.json()
+        }).then(data => {
+            return data.items
+        });
+    }
+
+    function load_source_playlist(playlist_id) {
+        return fetch(`https://api.spotify.com/v1/playlists/${playlist_id}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`
             },
             }).then(response => {
                 return response.json()
-            }).then(data => {
-                var new_tracks = []
-                for(var i = 0; i < data.items.length; i++) {
-                    // not sure why tracks are sometimes null
-                    if (data.items[i].track != null) {
-                        new_tracks.push(song_uri);
-                        new_tracks.push(data.items[i].track.uri)
-                    }
-                }
+            })
+    }
 
-                return new_tracks
-            }).then(new_tracks => {
-                fetch(`https://api.spotify.com/v1/me`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                }).then(response => {
-                    return response.json()
-                }).then(data => {
-                    console.log("user id: " + data.id)
-                    return data.id
-                }).then(user_id => {
-                    fetch(`https://api.spotify.com/v1/users/${user_id}/playlists`, {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            name: playlist.name + "--mix",
-                            public: false
-                        })
-                    }).then(response => {
-                        return response.json()
-                    }).then(data => {
-                        return data
-                    }).then(new_playlist => {
-                        fetch(`https://api.spotify.com/v1/playlists/${new_playlist.id}/tracks`, {
-                            method: 'POST',
-                            headers: {
-                                'Authorization': `Bearer ${token}`,
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                uris: new_tracks.slice(0, 100)
-                            })
-                        }).then(response => {
-                            return response.json()
-                        }).then(data => {
-                            console.log(data)
-                            return data
-                        })
-                    })
+    function interleave_tracks(data, song_uri) {
+        var new_tracks = []
+        for(var i = 0; i < data.length; i++) {
+            // not sure why tracks are sometimes null
+            if (data[i].track != null) {
+                new_tracks.push(song_uri);
+                new_tracks.push(data[i].track.uri)
+            }
+        }
+
+        return new_tracks
+    }
+
+    function create_playlist() {
+        var playlist_uri = document.getElementById("playlist_uri").value
+        var song_uri = document.getElementById("song_uri").value 
+
+        var playlist_id = playlist_uri.replace("spotify:playlist:", "")
+
+        load_source_playlist(playlist_id).then(source_playlist => {
+            get_tracks(source_playlist, song_uri).then(data => {
+                return interleave_tracks(data, song_uri)
+            })
+            .then(new_tracks => {
+                get_current_user(source_playlist)
+                .then(user_id => {
+                    create_playlist_with_tracks(user_id, source_playlist, new_tracks)
                 })
-            });
+            })
         });
     }
   </script>
 
 <form id="form">
-        Song uri: <input type="text" id="song_uri" value="><br/>
-        Playlist uri: <input type="text" id="playlist_uri" value=""><br/>
+        Song uri: <input type="text" id="song_uri" value="spotify:track:4SSnFejRGlZikf02HLewEF"><br/>
+        Playlist uri: <input type="text" id="playlist_uri" value="spotify:playlist:37i9dQZF1DXdyj2AzHZMLm"><br/>
         <input type="button" onclick="create_playlist()" value="Create playlist">
 </form>
 </body>
