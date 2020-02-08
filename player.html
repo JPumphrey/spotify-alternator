@@ -9,8 +9,10 @@
   <script src="token.js"></script>
   <script>
     function create_playlist() {
-        var playlist_id = document.getElementById("playlist_id").value 
-        var song_id = document.getElementById("song_uri").value 
+        var playlist_uri = document.getElementById("playlist_uri").value
+        var song_uri = document.getElementById("song_uri").value 
+
+        var playlist_id = playlist_uri.replace("spotify:playlist:", "")
 
         fetch(`https://api.spotify.com/v1/playlists/${playlist_id}`, {
         method: 'GET',
@@ -31,9 +33,17 @@
             }).then(response => {
                 return response.json()
             }).then(data => {
-                console.log(data)
-                return data.items
-            }).then(tracks => {
+                var new_tracks = []
+                for(var i = 0; i < data.items.length; i++) {
+                    // not sure why tracks are sometimes null
+                    if (data.items[i].track != null) {
+                        new_tracks.push(song_uri);
+                        new_tracks.push(data.items[i].track.uri)
+                    }
+                }
+
+                return new_tracks
+            }).then(new_tracks => {
                 fetch(`https://api.spotify.com/v1/me`, {
                 method: 'GET',
                 headers: {
@@ -42,7 +52,7 @@
                 }).then(response => {
                     return response.json()
                 }).then(data => {
-                    console.log(data.id)
+                    console.log("user id: " + data.id)
                     return data.id
                 }).then(user_id => {
                     fetch(`https://api.spotify.com/v1/users/${user_id}/playlists`, {
@@ -58,7 +68,6 @@
                     }).then(response => {
                         return response.json()
                     }).then(data => {
-                        console.log(data)
                         return data
                     }).then(new_playlist => {
                         fetch(`https://api.spotify.com/v1/playlists/${new_playlist.id}/tracks`, {
@@ -68,7 +77,7 @@
                                 'Content-Type': 'application/json'
                             },
                             body: JSON.stringify({
-                                uris: tracks.map(track => track.track.uri)
+                                uris: new_tracks.slice(0, 100)
                             })
                         }).then(response => {
                             return response.json()
@@ -84,8 +93,8 @@
   </script>
 
 <form id="form">
-        Song uri: <input type="text" id="song_uri"><br/>
-        Playlist uri: <input type="text" id="playlist_id"><br/>
+        Song uri: <input type="text" id="song_uri" value="><br/>
+        Playlist uri: <input type="text" id="playlist_uri" value=""><br/>
         <input type="button" onclick="create_playlist()" value="Create playlist">
 </form>
 </body>
