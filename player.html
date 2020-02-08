@@ -19,8 +19,6 @@
             body: JSON.stringify({
                 uris: new_tracks.slice(0, 100)
             })
-        }).then(response => {
-            return response.json()
         })
     }
 
@@ -38,7 +36,7 @@
         }).then(response => {
             return response.json()
         }).then(new_playlist => {
-            add_tracks(new_playlist, new_tracks)
+            return add_tracks(new_playlist, new_tracks)
         })
     }
 
@@ -92,11 +90,17 @@
         return new_tracks
     }
 
+    function display(output) {
+        document.getElementById("output").innerHTML = output
+    }
+
     function create_playlist() {
         var playlist_uri = document.getElementById("playlist_uri").value
         var song_uri = document.getElementById("song_uri").value 
 
         var playlist_id = playlist_uri.replace("spotify:playlist:", "")
+
+        display("Creating...")
 
         load_source_playlist(playlist_id).then(source_playlist => {
             get_tracks(source_playlist, song_uri).then(data => {
@@ -106,6 +110,11 @@
                 get_current_user(source_playlist)
                 .then(user_id => {
                     create_playlist_with_tracks(user_id, source_playlist, new_tracks)
+                    .then(response => {
+                        if (response.status >= 200 && response.status < 300) {
+                            display("Success!")
+                        }
+                    })
                 })
             })
         });
@@ -113,9 +122,10 @@
   </script>
 
 <form id="form">
-        Song uri: <input type="text" id="song_uri" value="spotify:track:4SSnFejRGlZikf02HLewEF"><br/>
-        Playlist uri: <input type="text" id="playlist_uri" value="spotify:playlist:37i9dQZF1DXdyj2AzHZMLm"><br/>
+        Song uri: <input type="text" id="song_uri" value="spotify:track:xxxx"><br/>
+        Playlist uri: <input type="text" id="playlist_uri" value="spotify:playlist:xxxx"><br/>
         <input type="button" onclick="create_playlist()" value="Create playlist">
 </form>
+<div id="output"></div>
 </body>
 </html>
